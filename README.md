@@ -1,9 +1,8 @@
-# ✨ The Kingdom of Lohitha — a scroll-to-play portfolio film
+# ⚡ Afsal VT — The Wizarding World of Cyber Defense
 
-My developer portfolio told as a fairy-tale film. Scroll down to play the story forward, scroll up to rewind. Chapters for About, Education, Skills, Projects, Achievements, Experience and Contact appear inside the scenes.
+A scroll-to-play interactive Harry Potter Wizarding World portfolio film for **Afsal VT** (Entry-Level SOC Analyst | IT Support Associate | Server Administrator Intern).
 
 **Built with:** React · TypeScript · Vite · Framer Motion · Lenis
-**Visuals:** original characters and world, created with AI (ChatGPT images + Google Flow video)
 
 ## Run locally
 ```bash
@@ -16,10 +15,10 @@ npm run dev
 npm run build   # output in dist/
 ```
 
-## Edit content
-- `src/data/portfolio.ts` — projects, skills, achievements, links
-- `src/data/film.ts` — what appears when, and where
-- `public/film/` — film frames (hd = 1920×1080, sd = 1280×720)
+## Project Structure
+- `src/data/portfolio.ts` — profile, skills, projects, certifications, experience, and contact details
+- `src/data/film.ts` — scroll timeline windows for each chapter
+- `public/hp/` — 6 widescreen Harry Potter keyframe scenes (`scene1.jpg` – `scene6.jpg`)
 
 ## Deploy
 Import this repo on Vercel or Netlify (framework: Vite, build: `npm run build`, output: `dist`).
