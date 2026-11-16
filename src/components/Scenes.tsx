@@ -1,7 +1,22 @@
 import { motion, MotionValue, useTransform } from "framer-motion";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { portfolio } from "../data/portfolio";
 import type { Scene } from "../data/film";
+
+function useIsPhone() {
+  const [isPhone, setIsPhone] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  useEffect(() => {
+    const update = () => setIsPhone(window.innerWidth < 768);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+  return isPhone;
+}
 
 const RAMP = 0.016;
 
@@ -135,10 +150,15 @@ const clusters: Word[][] = [
 ];
 void S;
 
-const isPhone = typeof window !== "undefined" && window.innerWidth < 760;
-
-function SkillWord({ w: w0, p, a, b, i, n }: { w: Word; p: MotionValue<number>; a: number; b: number; i: number; n: number }) {
-  const w = isPhone ? { ...w0, x: w0.label ? 6 : i % 2 ? 58 : 10, y: 12 + (i * 74) / Math.max(1, n - 1), size: w0.label ? w0.size : Math.min(w0.size, 1.2) } : w0;
+function SkillWord({ w: w0, p, a, b, i, n, isPhone }: { w: Word; p: MotionValue<number>; a: number; b: number; i: number; n: number; isPhone: boolean }) {
+  const w = isPhone
+    ? {
+        ...w0,
+        x: w0.label ? 6 : i % 2 ? 88 : 10,
+        y: 12 + (i * 74) / Math.max(1, n - 1),
+        size: w0.label ? w0.size : Math.min(w0.size, 1.15),
+      }
+    : w0;
   const s = a + 0.004 + (i % 7) * 0.003;
   const opacity = useTransform(p, [s, s + 0.012, b - 0.012, b], [0, w.label ? 1 : 0.95, w.label ? 1 : 0.95, 0]);
   const y = useTransform(p, [a, b], [60 * w.depth, -90 * w.depth]);
@@ -162,6 +182,7 @@ function SkillWord({ w: w0, p, a, b, i, n }: { w: Word; p: MotionValue<number>; 
 
 /* ------------------------------------------------------------------ */
 export function SceneView({ s, p }: { s: Scene; p: MotionValue<number> }) {
+  const isPhone = useIsPhone();
   const [a, b] = s.at;
   const hold = s.kind === "contact";
   const env = useEnvelope(p, a, b, hold, s.kind === "heading" ? 30 : 50);
@@ -253,7 +274,7 @@ export function SceneView({ s, p }: { s: Scene; p: MotionValue<number> }) {
       return (
         <div className="sc-field">
           {clusters[s.cluster].map((w, i) => (
-            <SkillWord key={w.t} w={w} p={p} a={a} b={b} i={i} n={clusters[s.cluster].length} />
+            <SkillWord key={w.t} w={w} p={p} a={a} b={b} i={i} n={clusters[s.cluster].length} isPhone={isPhone} />
           ))}
         </div>
       );

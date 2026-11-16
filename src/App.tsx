@@ -28,14 +28,14 @@ function toFilm(u: number) {
   return 1;
 }
 
-// 6 Pure AI-Generated Harry Potter Wizarding World Keyframes Starring Afsal VT
+// 6 Harry Potter Wizarding World Keyframes Starring Afsal VT (with desktop & mobile portrait focal points)
 const HP_SCENES = [
-  { url: "/hp/scene1.jpg", start: 0.0, end: 0.115, zoom: [1.0, 1.12] as [number, number], panX: [0, 0] as [number, number], panY: [0, -15] as [number, number], alignBottom: false },
-  { url: "/hp/scene2.jpg", start: 0.115, end: 0.27, zoom: [1.0, 1.02] as [number, number], panX: [0, 0] as [number, number], panY: [0, 0] as [number, number], alignBottom: false },
-  { url: "/hp/scene3.jpg", start: 0.27, end: 0.4, zoom: [1.0, 1.12] as [number, number], panX: [-12, 12] as [number, number], panY: [0, -8] as [number, number], alignBottom: false },
-  { url: "/hp/scene4.jpg", start: 0.4, end: 0.605, zoom: [1.0, 1.15] as [number, number], panX: [10, -10] as [number, number], panY: [0, -12] as [number, number], alignBottom: false },
-  { url: "/hp/scene5.jpg", start: 0.605, end: 0.86, zoom: [1.02, 1.15] as [number, number], panX: [-15, 10] as [number, number], panY: [0, -10] as [number, number], alignBottom: false },
-  { url: "/hp/scene6.jpg", start: 0.86, end: 1.0, zoom: [1.0, 1.08] as [number, number], panX: [0, 0] as [number, number], panY: [6, -6] as [number, number], alignBottom: false },
+  { url: "/hp/scene1.jpg", start: 0.0, end: 0.115, zoom: [1.0, 1.12] as [number, number], panX: [0, 0] as [number, number], panY: [0, -15] as [number, number], alignBottom: false, mobileFocusX: 0.5, mobilePanY: -0.04, isHeroPortrait: false },
+  { url: "/hp/scene2.jpg", start: 0.115, end: 0.27, zoom: [1.0, 1.02] as [number, number], panX: [0, 0] as [number, number], panY: [0, 0] as [number, number], alignBottom: false, mobileFocusX: 0.79, mobilePanY: -0.14, isHeroPortrait: true },
+  { url: "/hp/scene3.jpg", start: 0.27, end: 0.4, zoom: [1.0, 1.12] as [number, number], panX: [-12, 12] as [number, number], panY: [0, -8] as [number, number], alignBottom: false, mobileFocusX: 0.5, mobilePanY: -0.08, isHeroPortrait: false },
+  { url: "/hp/scene4.jpg", start: 0.4, end: 0.605, zoom: [1.0, 1.15] as [number, number], panX: [10, -10] as [number, number], panY: [0, -12] as [number, number], alignBottom: false, mobileFocusX: 0.5, mobilePanY: -0.04, isHeroPortrait: false },
+  { url: "/hp/scene5.jpg", start: 0.605, end: 0.86, zoom: [1.02, 1.15] as [number, number], panX: [-15, 10] as [number, number], panY: [0, -10] as [number, number], alignBottom: false, mobileFocusX: 0.71, mobilePanY: -0.12, isHeroPortrait: false },
+  { url: "/hp/scene6.jpg", start: 0.86, end: 1.0, zoom: [1.0, 1.08] as [number, number], panX: [0, 0] as [number, number], panY: [6, -6] as [number, number], alignBottom: false, mobileFocusX: 0.38, mobilePanY: -0.12, isHeroPortrait: false },
 ];
 
 type Ember = {
@@ -109,19 +109,82 @@ export default function App() {
       alpha: number
     ) => {
       const clampedT = Math.min(1, Math.max(0, localT));
-      const scale = sceneCfg.zoom[0] + (sceneCfg.zoom[1] - sceneCfg.zoom[0]) * clampedT;
-      const panX = sceneCfg.panX[0] + (sceneCfg.panX[1] - sceneCfg.panX[0]) * clampedT;
-      const panY = sceneCfg.panY[0] + (sceneCfg.panY[1] - sceneCfg.panY[0]) * clampedT;
-
-      const baseScale = Math.max(c.width / img.width, c.height / img.height);
-      const w = img.width * baseScale * scale;
-      const h = img.height * baseScale * scale;
-      const x = sceneCfg.alignBottom ? c.width - w + panX : (c.width - w) / 2 + panX;
-      const y = sceneCfg.alignBottom ? c.height - h + panY : (c.height - h) / 2 + panY;
+      const isPortraitMobile = c.width < c.height * 0.88;
 
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.drawImage(img, x, y, w, h);
+
+      if (isPortraitMobile && sceneCfg.isHeroPortrait) {
+        // On Android & iOS portrait screens for Scene 2 (About Afsal):
+        // 1) Draw the starry Hogwarts Courtyard across the full screen height as the ambient background
+        const bgScale = Math.max(c.width / img.width, c.height / img.height);
+        const bgW = img.width * bgScale;
+        const bgH = img.height * bgScale;
+        const bgX = -bgW * 0.22; // show the glowing courtyard towers & arches on the left/center
+        const bgY = (c.height - bgH) / 2;
+        ctx.drawImage(img, bgX, bgY, bgW, bgH);
+
+        // 2) Frame Afsal + the Full Moon + Hogwarts Towers (the right 43% of scene2.jpg) so 100% of Afsal's
+        //    shoulders, Gryffindor crest, glowing wand, head, and Moon fit inside the phone width in the top 66% of the screen!
+        const portraitSliceRatio = 0.435; // right 43.5% of 1920x900 contains Afsal (x=1085..1920)
+        const mobileScale = (c.width / (img.width * portraitSliceRatio)) * (0.98 + 0.03 * clampedT);
+        const pw = img.width * mobileScale;
+        const ph = img.height * mobileScale;
+        const px = c.width - pw; // anchor right edge so Afsal is centered horizontally on the phone screen
+        const py = Math.max(0, c.height * 0.02); // sit near the top of the phone screen above the About Afsal card
+
+        ctx.drawImage(img, px, py, pw, ph);
+
+        // 3) Smooth dark atmospheric gradient below Afsal (from py + ph * 0.82 down to c.height)
+        //    so the "ABOUT AFSAL" card at the bottom of the mobile screen reads with 100% clarity
+        const gradTop = Math.max(c.height * 0.48, py + ph * 0.78);
+        const grad = ctx.createLinearGradient(0, gradTop, 0, c.height);
+        grad.addColorStop(0, "rgba(8, 10, 36, 0)");
+        grad.addColorStop(0.28, "rgba(8, 10, 36, 0.82)");
+        grad.addColorStop(1, "rgba(8, 10, 36, 0.96)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, gradTop, c.width, c.height - gradTop);
+      } else if (isPortraitMobile) {
+        // On Android & iOS portrait screens for all other scenes:
+        // Center horizontally on each scene's key subject (Castle, Great Hall, Potions, Runic Circle, or Snowy Owl)
+        // and shift vertically upward so the subject shines in the upper 60% of the screen above the mobile text cards!
+        const scale = sceneCfg.zoom[0] + (sceneCfg.zoom[1] - sceneCfg.zoom[0]) * clampedT;
+        const panX = (sceneCfg.panX[0] + (sceneCfg.panX[1] - sceneCfg.panX[0]) * clampedT) * 0.45;
+        const baseScale = Math.max(c.width / img.width, c.height / img.height);
+        const w = img.width * baseScale * scale;
+        const h = img.height * baseScale * scale;
+
+        const focusX = sceneCfg.mobileFocusX ?? 0.5;
+        let x = c.width * 0.5 - w * focusX + panX;
+        x = Math.min(0, Math.max(c.width - w, x));
+
+        const offsetY = (sceneCfg.mobilePanY ?? 0) * c.height;
+        const y = (c.height - h) / 2 + offsetY;
+
+        ctx.drawImage(img, x, y, w, h);
+
+        // If shifted up, fill the bottom strip smoothly so mobile cards have a dark contrasting backdrop
+        const grad = ctx.createLinearGradient(0, c.height * 0.58, 0, c.height);
+        grad.addColorStop(0, "rgba(8, 10, 36, 0)");
+        grad.addColorStop(0.55, "rgba(8, 10, 36, 0.68)");
+        grad.addColorStop(1, "rgba(8, 10, 36, 0.92)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, c.height * 0.58, c.width, c.height * 0.42);
+      } else {
+        // Desktop / Landscape rendering
+        const scale = sceneCfg.zoom[0] + (sceneCfg.zoom[1] - sceneCfg.zoom[0]) * clampedT;
+        const panX = sceneCfg.panX[0] + (sceneCfg.panX[1] - sceneCfg.panX[0]) * clampedT;
+        const panY = sceneCfg.panY[0] + (sceneCfg.panY[1] - sceneCfg.panY[0]) * clampedT;
+
+        const baseScale = Math.max(c.width / img.width, c.height / img.height);
+        const w = img.width * baseScale * scale;
+        const h = img.height * baseScale * scale;
+        const x = sceneCfg.alignBottom ? c.width - w + panX : (c.width - w) / 2 + panX;
+        const y = sceneCfg.alignBottom ? c.height - h + panY : (c.height - h) / 2 + panY;
+
+        ctx.drawImage(img, x, y, w, h);
+      }
+
       ctx.restore();
     };
 
