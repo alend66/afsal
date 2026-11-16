@@ -25,7 +25,7 @@ html { scrollbar-width: none; }
 a { color: inherit; text-decoration: none; }
 
 .film-track { display: block; height: 5200vh; }
-@media (max-width: 760px) { .film-track { height: 4200vh; } }
+@media (max-width: 768px) { .film-track { height: 2200vh; } }
 
 /* ---------- Film ---------- */
 .film { position: fixed; inset: 0; overflow: hidden; background: var(--night) url(/hp/scene1.jpg) center / cover no-repeat; }
@@ -52,13 +52,13 @@ a { color: inherit; text-decoration: none; }
 .sc-right { right: var(--pad); top: 50%; translate: 0 -50%; align-items: flex-end; }
 
 /* Soft pools of shadow behind text so it reads like light on the scene, not a box */
-.halo::before, .halo-soft::before, .halo-strong::before { content: ""; position: absolute; z-index: -1; inset: -22% -16%; pointer-events: none; filter: blur(28px); border-radius: 50%; }
+.halo::before, .halo-soft::before, .halo-strong::before { content: ""; position: absolute; z-index: -1; inset: -24% -18%; pointer-events: none; border-radius: 50%; }
 .halo::before { background: radial-gradient(closest-side, rgba(7, 6, 28, 0.58), rgba(7, 6, 28, 0.22) 65%, transparent); }
 .halo-soft::before { background: radial-gradient(closest-side, rgba(7, 6, 28, 0.4), transparent); }
 .halo-strong::before { inset: -30% -6%; background: radial-gradient(closest-side, rgba(7, 6, 28, 0.66), rgba(7, 6, 28, 0.3) 60%, transparent); }
 
 /* ---------- Typography ---------- */
-.ltr { display: inline-block; will-change: transform, filter; }
+.ltr { display: inline-block; will-change: transform, opacity; }
 .t-eyebrow, .h-eyebrow { font-family: var(--title); font-size: clamp(12px, 1.15vw, 15px); letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold-3); text-shadow: var(--glow); }
 .h-eyebrow { color: var(--gold); margin-bottom: 6px; }
 .t-meta { margin-top: 8px; font-family: var(--serif); font-style: italic; font-size: clamp(17px, 1.5vw, 21px); color: var(--ink-2); text-shadow: var(--glow); }
@@ -187,9 +187,11 @@ a { color: inherit; text-decoration: none; }
   }
   .h-hero {
     font-size: clamp(44px, 13.5vw, 68px);
+    filter: none;
   }
   .h-chapter {
     font-size: clamp(32px, 9.5vw, 52px);
+    filter: none;
   }
   .h-section,
   .sc-lm .h-section,
@@ -197,6 +199,7 @@ a { color: inherit; text-decoration: none; }
   .sc-tl-wide .h-section {
     font-size: clamp(26px, 7.6vw, 38px);
     white-space: nowrap;
+    filter: none;
   }
   .sc-lm, .sc-rm, .sc-tl-wide {
     left: 16px;
@@ -209,9 +212,9 @@ a { color: inherit; text-decoration: none; }
     text-align: left;
     padding: 16px 18px;
     border-radius: 20px;
-    background: linear-gradient(180deg, rgba(8, 10, 34, 0.62), rgba(6, 7, 24, 0.84));
-    backdrop-filter: blur(10px) saturate(1.3);
-    -webkit-backdrop-filter: blur(10px) saturate(1.3);
+    background: linear-gradient(180deg, rgba(8, 10, 34, 0.84), rgba(6, 7, 24, 0.94));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     box-shadow: inset 0 1px 0 rgba(255, 236, 190, 0.22), 0 16px 40px -12px rgba(0, 0, 0, 0.75);
   }
   .comp.right .edu-line {
@@ -249,6 +252,14 @@ a { color: inherit; text-decoration: none; }
     padding: 18px 20px;
     gap: 12px;
     border-radius: 22px;
+    background: linear-gradient(180deg, rgba(14, 10, 44, 0.86), rgba(8, 8, 30, 0.94));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .pill-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.14);
   }
   .g-num {
     display: none;

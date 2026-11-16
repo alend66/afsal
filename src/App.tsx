@@ -41,13 +41,32 @@ const HP_SCENES = [
 type Ember = {
   x: number;
   y: number;
-  r: number;
+  size: number;
   vx: number;
   vy: number;
   alpha: number;
   phase: number;
-  color: string;
+  spriteIdx: number;
 };
+
+function createEmberSprite(color: string): HTMLCanvasElement {
+  const size = 28;
+  const off = document.createElement("canvas");
+  off.width = size;
+  off.height = size;
+  const octx = off.getContext("2d");
+  if (octx) {
+    const c = size / 2;
+    const grad = octx.createRadialGradient(c, c, 0, c, c, c);
+    grad.addColorStop(0, "#ffffff");
+    grad.addColorStop(0.28, color);
+    grad.addColorStop(0.65, `${color}55`);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    octx.fillStyle = grad;
+    octx.fillRect(0, 0, size, size);
+  }
+  return off;
+}
 
 export default function App() {
   useLenis(true);
@@ -55,6 +74,13 @@ export default function App() {
   const pos = useRef(0);
   const imagesRef = useRef<(HTMLImageElement | null)[]>(new Array(HP_SCENES.length).fill(null));
   const embersRef = useRef<Ember[]>([]);
+  const spritesRef = useRef<HTMLCanvasElement[]>([]);
+  const gradientsRef = useRef<{ h: number; sceneGrad: CanvasGradient | null; portraitGrad: CanvasGradient | null; portraitGradTop: number }>({
+    h: 0,
+    sceneGrad: null,
+    portraitGrad: null,
+    portraitGradTop: 0,
+  });
 
   const { scrollYProgress: scrollRaw } = useScroll();
   const scrollYProgress = useTransform(scrollRaw, toFilm);
@@ -74,25 +100,36 @@ export default function App() {
   const hint = useTransform(scrollYProgress, [0, 0.02], [1, 0]);
 
   useEffect(() => {
-    // Initialize floating Hogwarts spell embers
+    // Pre-render glowing Hogwarts spell ember sprites once (eliminates expensive per-frame shadowBlur on phones)
     const colors = ["#ffdf8e", "#f6c467", "#fff5d6", "#7fe7ff", "#ffd27d"];
-    embersRef.current = Array.from({ length: 55 }, () => ({
+    spritesRef.current = colors.map(createEmberSprite);
+
+    const mobile = typeof window !== "undefined" && window.innerWidth < 768;
+    const count = mobile ? 24 : 50;
+    embersRef.current = Array.from({ length: count }, () => ({
       x: Math.random(),
       y: Math.random(),
-      r: 1.1 + Math.random() * 2.6,
+      size: 9 + Math.random() * 14,
       vx: (Math.random() - 0.5) * 0.00025,
       vy: -0.0003 - Math.random() * 0.0005,
       alpha: 0.35 + Math.random() * 0.65,
       phase: Math.random() * Math.PI * 2,
-      color: colors[Math.floor(Math.random() * colors.length)],
+      spriteIdx: Math.floor(Math.random() * colors.length),
     }));
 
-    // Load all 6 Harry Potter scenes starring Afsal
+    // Load & pre-decode all 6 Harry Potter scenes starring Afsal so transitions never hitch on mobile
     HP_SCENES.forEach((sc, idx) => {
       const img = new Image();
-      img.src = `${sc.url}?v=courtyard14`;
+      img.decoding = "async";
+      img.src = `${sc.url}?v=courtyard15`;
       img.onload = () => {
-        imagesRef.current[idx] = img;
+        if (typeof img.decode === "function") {
+          img.decode().catch(() => {}).finally(() => {
+            imagesRef.current[idx] = img;
+          });
+        } else {
+          imagesRef.current[idx] = img;
+        }
       };
     });
   }, []);
@@ -135,19 +172,21 @@ export default function App() {
 
         ctx.drawImage(img, px, py, pw, ph);
 
-        // 3) Smooth dark atmospheric gradient below Afsal (from py + ph * 0.82 down to c.height)
-        //    so the "ABOUT AFSAL" card at the bottom of the mobile screen reads with 100% clarity
+        // 3) Cached smooth dark atmospheric gradient below Afsal so mobile card reads clearly
         const gradTop = Math.max(c.height * 0.48, py + ph * 0.78);
-        const grad = ctx.createLinearGradient(0, gradTop, 0, c.height);
-        grad.addColorStop(0, "rgba(8, 10, 36, 0)");
-        grad.addColorStop(0.28, "rgba(8, 10, 36, 0.82)");
-        grad.addColorStop(1, "rgba(8, 10, 36, 0.96)");
-        ctx.fillStyle = grad;
+        if (!gradientsRef.current.portraitGrad || gradientsRef.current.h !== c.height || Math.abs(gradientsRef.current.portraitGradTop - gradTop) > 4) {
+          const grad = ctx.createLinearGradient(0, gradTop, 0, c.height);
+          grad.addColorStop(0, "rgba(8, 10, 36, 0)");
+          grad.addColorStop(0.28, "rgba(8, 10, 36, 0.82)");
+          grad.addColorStop(1, "rgba(8, 10, 36, 0.96)");
+          gradientsRef.current.portraitGrad = grad;
+          gradientsRef.current.portraitGradTop = gradTop;
+          gradientsRef.current.h = c.height;
+        }
+        ctx.fillStyle = gradientsRef.current.portraitGrad;
         ctx.fillRect(0, gradTop, c.width, c.height - gradTop);
       } else if (isPortraitMobile) {
         // On Android & iOS portrait screens for all other scenes:
-        // Center horizontally on each scene's key subject (Castle, Great Hall, Potions, Runic Circle, or Snowy Owl)
-        // and shift vertically upward so the subject shines in the upper 60% of the screen above the mobile text cards!
         const scale = sceneCfg.zoom[0] + (sceneCfg.zoom[1] - sceneCfg.zoom[0]) * clampedT;
         const panX = (sceneCfg.panX[0] + (sceneCfg.panX[1] - sceneCfg.panX[0]) * clampedT) * 0.45;
         const baseScale = Math.max(c.width / img.width, c.height / img.height);
@@ -163,12 +202,15 @@ export default function App() {
 
         ctx.drawImage(img, x, y, w, h);
 
-        // If shifted up, fill the bottom strip smoothly so mobile cards have a dark contrasting backdrop
-        const grad = ctx.createLinearGradient(0, c.height * 0.58, 0, c.height);
-        grad.addColorStop(0, "rgba(8, 10, 36, 0)");
-        grad.addColorStop(0.55, "rgba(8, 10, 36, 0.68)");
-        grad.addColorStop(1, "rgba(8, 10, 36, 0.92)");
-        ctx.fillStyle = grad;
+        if (!gradientsRef.current.sceneGrad || gradientsRef.current.h !== c.height) {
+          const grad = ctx.createLinearGradient(0, c.height * 0.58, 0, c.height);
+          grad.addColorStop(0, "rgba(8, 10, 36, 0)");
+          grad.addColorStop(0.55, "rgba(8, 10, 36, 0.68)");
+          grad.addColorStop(1, "rgba(8, 10, 36, 0.92)");
+          gradientsRef.current.sceneGrad = grad;
+          gradientsRef.current.h = c.height;
+        }
+        ctx.fillStyle = gradientsRef.current.sceneGrad;
         ctx.fillRect(0, c.height * 0.58, c.width, c.height * 0.42);
       } else {
         // Desktop / Landscape rendering
@@ -190,10 +232,11 @@ export default function App() {
 
     const renderLoop = (time: number) => {
       const c = canvas.current;
-      const ctx = c?.getContext("2d");
+      const ctx = c?.getContext("2d", { alpha: false });
       if (c && ctx) {
         const p = pos.current;
-        ctx.clearRect(0, 0, c.width, c.height);
+        ctx.fillStyle = "#080a24";
+        ctx.fillRect(0, 0, c.width, c.height);
 
         const FADE = 0.035;
         let activeIdx = HP_SCENES.findIndex((s) => p >= s.start && p <= s.end);
@@ -204,8 +247,9 @@ export default function App() {
         const span = Math.max(0.001, currentScene.end - currentScene.start);
         const localT = (p - currentScene.start) / span;
 
+        const isMobileCanvas = c.width < c.height * 0.88;
         ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
+        ctx.imageSmoothingQuality = isMobileCanvas ? "medium" : "high";
 
         if (currentImg) {
           drawSceneImage(ctx, c, currentImg, localT, currentScene, 1);
@@ -223,6 +267,7 @@ export default function App() {
           }
         }
 
+        const sprites = spritesRef.current;
         for (const e of embersRef.current) {
           e.x += e.vx;
           e.y += e.vy;
@@ -234,19 +279,13 @@ export default function App() {
           if (e.x > 1.02) e.x = -0.02;
 
           const twinkle = 0.55 + 0.45 * Math.sin(time * 0.003 + e.phase);
-          const ex = e.x * c.width;
-          const ey = e.y * c.height;
-
-          ctx.save();
-          ctx.globalAlpha = e.alpha * twinkle * 0.85;
-          ctx.fillStyle = e.color;
-          ctx.shadowColor = e.color;
-          ctx.shadowBlur = 12;
-          ctx.beginPath();
-          ctx.arc(ex, ey, e.r, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+          const sprite = sprites[e.spriteIdx];
+          if (sprite) {
+            ctx.globalAlpha = e.alpha * twinkle * 0.9;
+            ctx.drawImage(sprite, e.x * c.width - e.size * 0.5, e.y * c.height - e.size * 0.5, e.size, e.size);
+          }
         }
+        ctx.globalAlpha = 1;
       }
       rafId = requestAnimationFrame(renderLoop);
     };
@@ -259,9 +298,12 @@ export default function App() {
     const resize = () => {
       const c = canvas.current;
       if (!c) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const isPhoneWidth = window.innerWidth < 768;
+      const dpr = isPhoneWidth ? Math.min(window.devicePixelRatio || 1, 1.25) : Math.min(window.devicePixelRatio || 1, 2);
       c.width = Math.round(window.innerWidth * dpr);
       c.height = Math.round(window.innerHeight * dpr);
+      gradientsRef.current.sceneGrad = null;
+      gradientsRef.current.portraitGrad = null;
     };
     resize();
     window.addEventListener("resize", resize);

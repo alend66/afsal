@@ -20,29 +20,28 @@ function useIsPhone() {
 
 const RAMP = 0.016;
 
-/** Whole-scene envelope: drifts in out of focus, settles, then floats past the camera. */
-function useEnvelope(p: MotionValue<number>, a: number, b: number, hold = false, travel = 50) {
+/** Whole-scene envelope: drifts smoothly into focus and out of view (zero blur overhead on phones). */
+function useEnvelope(p: MotionValue<number>, a: number, b: number, hold = false, travel = 50, isPhone = false) {
   const end = hold ? 99 : b;
   const r = 0.008;
   const opacity = useTransform(p, [a, a + r, end - r, end], [0, 1, 1, 0]);
   const blurV = useTransform(p, [a, a + r, end - r, end], [6, 0, 0, 6]);
-  const filter = useTransform(blurV, (v) => `blur(${v}px)`);
+  const filter = useTransform(blurV, (v) => (isPhone ? "none" : `blur(${v}px)`));
   const y = useTransform(p, [a, hold ? a + 0.05 : end], [travel, hold ? 0 : -travel]);
   const scale = useTransform(p, [a, a + r, end - r, end], [0.99, 1, 1, 1.02]);
   const pointerEvents = useTransform(p, (v) => (v > a + r * 0.5 && v < end - r * 0.5 ? "auto" : "none"));
-  return { opacity, filter, y, scale, pointerEvents };
+  const visibility = useTransform(opacity, (o) => (o <= 0.005 ? "hidden" : "visible"));
+  return { opacity, filter: isPhone ? undefined : filter, y, scale, pointerEvents, visibility };
 }
 
-/** A line inside a scene that arrives a beat after the one before it. */
+/** A line inside a scene that arrives a beat after the one before it (pure GPU transform + opacity). */
 function Beat({ p, a, i, children, className, as = "div" }: { p: MotionValue<number>; a: number; i: number; children: ReactNode; className?: string; as?: "div" | "p" | "h2" | "h3" }) {
   const s = a + 0.002 + i * 0.0015;
   const opacity = useTransform(p, [s, s + 0.006], [0, 1]);
   const y = useTransform(p, [s, s + 0.008], [10, 0]);
-  const blurV = useTransform(p, [s, s + 0.006], [3, 0]);
-  const filter = useTransform(blurV, (v) => `blur(${v}px)`);
   const M = motion[as];
   return (
-    <M className={className} style={{ opacity, y, filter }}>
+    <M className={className} style={{ opacity, y }}>
       {children}
     </M>
   );
@@ -81,10 +80,8 @@ function Letters({ text, p, a, span = 0.016, className }: { text: string; p: Mot
 function Letter({ c, p, s }: { c: string; p: MotionValue<number>; s: number }) {
   const opacity = useTransform(p, [s, s + 0.005], [0, 1]);
   const y = useTransform(p, [s, s + 0.007], ["0.25em", "0em"]);
-  const blurV = useTransform(p, [s, s + 0.005], [4, 0]);
-  const filter = useTransform(blurV, (v) => `blur(${v}px)`);
   return (
-    <motion.span aria-hidden className="ltr" style={{ opacity, y, filter }}>
+    <motion.span aria-hidden className="ltr" style={{ opacity, y }}>
       {c === " " ? "\u00A0" : c}
     </motion.span>
   );
@@ -164,10 +161,20 @@ function SkillWord({ w: w0, p, a, b, i, n, isPhone }: { w: Word; p: MotionValue<
   const y = useTransform(p, [a, b], [60 * w.depth, -90 * w.depth]);
   const blurV = useTransform(p, [s, s + 0.012, b - 0.012, b], [10, w.depth < 0.6 ? 0.6 : 0, 0, 10]);
   const filter = useTransform(blurV, (v) => `blur(${v}px)`);
+  const visibility = useTransform(opacity, (o) => (o <= 0.005 ? "hidden" : "visible"));
   return (
     <motion.span
       className={`sk ${w.label ? "sk-label" : ""}`}
-      style={{ left: `${w.x}%`, top: `${w.y}%`, translate: `-${w.x}% 0`, opacity, y, filter, fontSize: `calc(${w.size} * var(--sk))` }}
+      style={{
+        left: `${w.x}%`,
+        top: `${w.y}%`,
+        translate: `-${w.x}% 0`,
+        opacity,
+        y,
+        filter: isPhone ? undefined : filter,
+        visibility,
+        fontSize: `calc(${w.size} * var(--sk))`,
+      }}
     >
       {w.label ? (
         <>
@@ -185,7 +192,7 @@ export function SceneView({ s, p }: { s: Scene; p: MotionValue<number> }) {
   const isPhone = useIsPhone();
   const [a, b] = s.at;
   const hold = s.kind === "contact";
-  const env = useEnvelope(p, a, b, hold, s.kind === "heading" ? 30 : 50);
+  const env = useEnvelope(p, a, b, hold, s.kind === "heading" ? 30 : 50, isPhone);
   const P = portfolio;
 
   switch (s.kind) {

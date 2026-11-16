@@ -4,11 +4,15 @@ import Lenis from "lenis";
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** Smooth, cinematic scrolling (skipped for people who prefer reduced motion). */
+const isTouchDevice = () =>
+  typeof window !== "undefined" &&
+  (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 768);
+
+/** Smooth, cinematic scrolling on desktop (native compositor touch inertia on Android/iOS). */
 export function useLenis(enabled: boolean) {
   const ref = useRef<Lenis | null>(null);
   useEffect(() => {
-    if (!enabled || prefersReducedMotion()) return;
+    if (!enabled || prefersReducedMotion() || isTouchDevice()) return;
     const lenis = new Lenis({ duration: 1.25, smoothWheel: true, wheelMultiplier: 0.9 });
     ref.current = lenis;
     let raf = 0;
